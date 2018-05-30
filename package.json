@@ -1,0 +1,45 @@
+{
+  "name": "prometheus_inspec_exporter",
+  "engines": {
+    "node": ">=7.6"
+  },
+  "version": "0.0.2",
+  "description": "Prometheus exporter for inspec data",
+  "main": "index.js",
+  "scripts": {
+    "test": "nyc mocha",
+    "coverage": "nyc report --reporter=text-lcov | coveralls",
+    "format": "standard --fix",
+    "build": "docker build . -t geekdave/prometheus_inspec_exporter"
+  },
+  "author": "",
+  "license": "Apache-2.0",
+  "dependencies": {
+    "async-lock": "^1.1.2",
+    "axios": "^0.17.1",
+    "express": "^4.16.2",
+    "lodash": "^4.17.4",
+    "luxon": "^0.2.11",
+    "prom-client": "^10.2.2",
+    "renderjson": "^1.3.1"
+  },
+  "devDependencies": {
+    "chai": "^4.1.2",
+    "coveralls": "^3.0.0",
+    "mocha": "^5.0.0",
+    "nock": "^9.1.6",
+    "nyc": "^11.4.1",
+    "semistandard": "^12.0.0"
+  },
+  "semistandard": {
+    "globals": [
+      "describe",
+      "expect",
+      "it",
+      "beforeAll",
+      "afterAll",
+      "beforeEach",
+      "afterEach"
+    ]
+  }
+}

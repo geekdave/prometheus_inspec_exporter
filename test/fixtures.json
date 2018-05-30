@@ -1,0 +1,16 @@
+{
+    "org": {
+        "name": "springfield",
+        "id": "1234567a-123b-456c-def7-890abcdefg01"
+    },
+    "projects": [{
+        "name": "burns",
+        "id": "2234567a-123b-456c-def7-890abcdefg01"
+    }, {
+        "name": "smithers",
+        "id": "3234567a-123b-456c-def7-890abcdefg01"
+    }, {
+        "name": "frink",
+        "id": "4234567a-123b-456c-def7-890abcdefg01"
+    }]
+}
