@@ -3,6 +3,9 @@ const express = require('express');
 const prometheusClient = require('prom-client');
 const { spawn } = require('child_process');
 var fs = require('fs');
+var renderjson = require('renderjson');
+const jsdom = require("jsdom");
+const { JSDOM } = jsdom;
 
 var AsyncLock = require('async-lock');
 var lock = new AsyncLock();
@@ -104,8 +107,35 @@ function runInSpec () {
     var age = currentTime - mtime;
   
     var response = JSON.parse(contents);
-    // console.log(response);  
+
+    // const dom = new JSDOM('<!DOCTYPE html><html><head></head><body><div id="test"></div></body></html>', { pretendToBeVisual: true, runScripts: "dangerously" });
+
+    // GLOBAL.document = dom.window.document;
+    // var test = GLOBAL.document.getElementById("test");
+
+    // renderjson.set_show_to_level("all")
+    // var html = renderjson(response);
+
+    // test.appendChild(html);
+
+    // var rendered = dom.serialize();
+    // // console.log(response);  
+
+    var rendered = '<head> <style type="text/css"> .renderjson a{text-decoration: none;}.renderjson .disclosure{color: crimson; font-size: 150%;}.renderjson '
+      + '.syntax{color: grey;}.renderjson .string{color: red;}.renderjson .number{color: cyan;}.renderjson .boolean{color: plum;}.renderjson .key{color: lightblue;}'
+      + '.renderjson .keyword{color: lightgoldenrodyellow;}.renderjson .object.syntax{color: lightseagreen;}.renderjson .array.syntax{color: lightsalmon;}</style></head>'
+      + '<div id="test"></div><script type="text/javascript" src="http://caldwell.github.io/renderjson/renderjson.js"></script><script>var example =';
+    rendered+=contents;
+    rendered += ';renderjson.set_show_to_level("all");document.getElementById("test").appendChild(renderjson(example));</script>'
   
+    fs.writeFile('/Users/dcadwallader/Documents/inspec-' + file + '.html', rendered, (err) => {  
+      // throws an error, you could also catch it here
+      if (err) throw err;
+  
+      // success case, the file was saved
+      console.log('HTML saved!');
+    });
+
     if (!response) {
       throw new Error('error retrieving response from inspec process');
     }
