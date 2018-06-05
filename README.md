@@ -121,5 +121,5 @@ labels:
 annotations:
   description: '{{ $labels.instance }} has stale InSpec metrics.'
   summary: Instance {{ $labels.instance }} expected to have InSpec results refreshed every hour, but it has been over 2 hours.  Please check that the cron job is running as expected.
-``
+```
 
