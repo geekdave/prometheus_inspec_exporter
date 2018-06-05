@@ -57,11 +57,13 @@ sudo docker run \
   --rm \
   --name prometheus_inspec_exporter \
   -v /usr/local/etc/inspec-results:/usr/local/etc/inspec-results \
+  -v /usr/local/etc/inspec-reports:/usr/local/etc/inspec-reports \
   -p 9207:9207 \
   geekdave/prometheus_inspec_exporter
 ```
 
-* Change `/usr/local/etc/inspec-results:/usr/local/etc/inspec-results` to reflect `/path/to/your/inspec-results:/usr/local/etc/inspec-results`
+* Change `/usr/local/etc/inspec-results:/usr/local/etc/inspec-results` to reflect `/path/to/your/inspec-results:/usr/local/etc/inspec-results` from your InSpec runner script (above)
+* Change `/usr/local/etc/inspec-reports:/usr/local/etc/inspec-reports` to reflect `/path/to/your/inspec-reports:/usr/local/etc/inspec-reports` - Any directory you want this exporter to save your HTML reports into.
 * Change `-p 9207:9207` to reflect `-p $PORT_YOU_WANT_TO_EXPOSE:9207`
 
 ### Prometheus Scraping
@@ -86,13 +88,33 @@ See the Prometheus docs for setting up automatic service discovery instead of ma
 You can then write Prometheus alerts like this:
 
 ```
-alert: InsecureTLS
-expr: inspec_checks_total{profile="ssl-baseline",status="failed"} > 0
-labels:
-  severity: slack
-annotations:
-  description: '{{ $labels.instance }} is using an insecure TLS version.'
-  summary: Instance {{ $labels.instance }} is using an insecure TLS version.
+  - alert: ComplianceFailure
+    expr: inspec_checks_total{status="failed"} > 0
+    labels:
+      severity: slack
+    annotations:
+      identifier: "{{ $labels.profile }} : {{ $labels.instance }}"
+      description: "{{ $labels.instance }} has {{ $value }} compliance failures on the {{ $labels.profile }} profile.
+```
+
+## Alerting with Report Integration
+
+This exporter saves HTML versions of the full InSpec reports to `/usr/local/etc/inspec-reports` using a custom markdown/HTML format that preserves much more metadata than the out-of-the-box InSpec reports.  
+
+HTML reports will be saved to `/usr/local/etc/inspec-reports` (map it using docker path mapping as defined above).
+
+You can write a script to periodically upload these files to S3 to make them available as click-throughs from your Prometheus alerts as shown below.
+
+TODO: Create automatic support for uploading to S3.
+
+```
+  - alert: ComplianceFailure
+    expr: inspec_checks_total{status="failed"} > 0
+    labels:
+      severity: slack
+    annotations:
+      identifier: "{{ $labels.profile }} : {{ $labels.instance }}"
+      description: "{{ $labels.instance }} has {{ $value }} compliance failures on the {{ $labels.profile }} profile. Report and remediation steps: http://glueops-inspec-bucket-results.s3-website-us-east-1.amazonaws.com/{{ $labels.profile }}/{{ $labels.instance }}"
 ```
 
 ## Checking Cron
