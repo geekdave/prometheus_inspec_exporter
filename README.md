@@ -93,7 +93,7 @@ labels:
 annotations:
   description: '{{ $labels.instance }} is using an insecure TLS version.'
   summary: Instance {{ $labels.instance }} is using an insecure TLS version.
-``
+```
 
 ## Checking Cron
 
