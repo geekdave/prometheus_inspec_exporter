@@ -2,10 +2,8 @@ const _ = require('lodash');
 const express = require('express');
 const prometheusClient = require('prom-client');
 const { spawn } = require('child_process');
-var fs = require('fs');
-var renderjson = require('renderjson');
-const jsdom = require("jsdom");
-const { JSDOM } = jsdom;
+const fs = require('fs');
+const marked = require('marked');
 
 var AsyncLock = require('async-lock');
 var lock = new AsyncLock();
@@ -96,6 +94,8 @@ function runInSpec () {
   //inspec supermarket exec dev-sec/cis-docker-benchmark --reporter json | jq
 
   var dirName = '/usr/local/etc/inspec-results';
+  var reportDirName = '/usr/local/etc/inspec-reports';
+
   var files = fs.readdirSync(dirName);
 
   _.each(files, (file) => {
@@ -108,34 +108,6 @@ function runInSpec () {
   
     var response = JSON.parse(contents);
 
-    // const dom = new JSDOM('<!DOCTYPE html><html><head></head><body><div id="test"></div></body></html>', { pretendToBeVisual: true, runScripts: "dangerously" });
-
-    // GLOBAL.document = dom.window.document;
-    // var test = GLOBAL.document.getElementById("test");
-
-    // renderjson.set_show_to_level("all")
-    // var html = renderjson(response);
-
-    // test.appendChild(html);
-
-    // var rendered = dom.serialize();
-    // // console.log(response);  
-
-    var rendered = '<head> <style type="text/css"> .renderjson a{text-decoration: none;}.renderjson .disclosure{color: crimson; font-size: 150%;}.renderjson '
-      + '.syntax{color: grey;}.renderjson .string{color: red;}.renderjson .number{color: cyan;}.renderjson .boolean{color: plum;}.renderjson .key{color: lightblue;}'
-      + '.renderjson .keyword{color: lightgoldenrodyellow;}.renderjson .object.syntax{color: lightseagreen;}.renderjson .array.syntax{color: lightsalmon;}</style></head>'
-      + '<div id="test"></div><script type="text/javascript" src="http://caldwell.github.io/renderjson/renderjson.js"></script><script>var example =';
-    rendered+=contents;
-    rendered += ';renderjson.set_show_to_level("all");document.getElementById("test").appendChild(renderjson(example));</script>'
-  
-    fs.writeFile('/Users/dcadwallader/Documents/inspec-' + file + '.html', rendered, (err) => {  
-      // throws an error, you could also catch it here
-      if (err) throw err;
-  
-      // success case, the file was saved
-      console.log('HTML saved!');
-    });
-
     if (!response) {
       throw new Error('error retrieving response from inspec process');
     }
@@ -145,16 +117,28 @@ function runInSpec () {
     }
   
     _.each(response.profiles, (profile) => {
+
+      var rendered = "";
+
+      var tocPassed = "";
+      var tocFailed = "";
+      var tocSkipped = "";
+  
+      var summary = "# Summary\n\n";
+
+      var intro = "";
+
       const profileName = profile.name;
+
+      intro += `# ${profileName}\n\n`;
       
       var numPassed = 0;
       var numFailed = 0;
       var numSkipped = 0;
-  
+      
       _.each(profile.controls, (control) => {
         var controlId = control.id;
         var controlTitle = control.title;
-        var controlDesc = control.desc;
   
         var passed = true;
         var skipped = false;
@@ -162,8 +146,33 @@ function runInSpec () {
         if (!control.results || control.results.length === 0) {
           return;
         }
-  
+
+        var anchorTitle = `${controlId}: ${controlTitle}`;
+        var anchorId = anchorTitle.replace(/[^a-zA-Z0-9_]+/g, "-");
+        anchorId = anchorId.toLowerCase();    
+        const toc = `* [${anchorTitle}](#${anchorId})\n`;
+        rendered += `\n## ${anchorTitle}\n\n`;
+        var results = "### Results\n";
+
         _.each(control.results, (result) => {
+
+          results += `1. ${result.status}\n\n`;
+          if (result.code_desc) {
+            results += "    * Description:\n\n" 
+            results += "        ```\n";
+            const desc = '        ' + result.code_desc.replace(/\n/g, "\n        ");
+            results += `${desc}\n`;
+            results += "        ```\n";
+          }
+          
+          if (result.message) {
+            results += "    * Message:\n\n" 
+            results += "        ```\n";
+            const msg = '        ' + result.message.replace(/\n/g, "\n        ")
+            results += `${msg}\n`;
+            results += "        ```\n";
+          }
+
           var status = result.status;
           if (status === "failed") {
             passed = false;
@@ -172,19 +181,60 @@ function runInSpec () {
           }          
         });
   
-        var overallStatus;
+        rendered += "### Status: ";
         if (!passed) {
+          tocFailed += toc;
+          rendered += "**Failed**";
           numFailed++;
         } else {
           if (skipped) {
+            tocSkipped += toc;
+            rendered += "Skipped";
             numSkipped++;
           } else {
+            tocPassed += toc;
+            rendered += "Passed";
             numPassed++;
           }
         }
-        // console.log(profileName + " : " + controlId + " : " + overallStatus);
+
+        rendered += `\n\n${results}\n\n`;
+
+        if (control.desc) {
+          rendered += `### Description:\n\n${control.desc}\n\n`;
+        }
+
+        if (control.refs && control.refs.length > 0) {
+          rendered += `### References:\n\n`;
+
+          _.each(control.refs, (ref) => {
+            rendered += `1. [${ref.ref}](${ref.url})\n`;
+          });  
+        }
+
+        rendered += "\n---\n[\[Back to Top\]](#summary)n\n"
       });
-  
+
+      summary += `## Failed: ${numFailed}\n`;
+
+      if (numFailed) {
+        summary += tocFailed + "\n";
+      }
+
+      summary += `## Passed: ${numPassed}\n`;
+
+      if (numPassed) {
+        summary += tocPassed + "\n";
+      }      
+
+      summary += `## Skipped: ${numSkipped}\n`;
+
+      if (numSkipped) {
+        summary += tocSkipped + "\n";
+      }
+
+      intro += `Failed: ${numFailed} • Passed: ${numPassed} • Skipped: ${numSkipped}\n\n`;
+
       controls.set({
         profile: profileName,
         status: "passed"
@@ -203,8 +253,50 @@ function runInSpec () {
       lastModified.set({
         profile: profileName
       }, mtime);
+
+      var markedUp = marked(rendered);
+      var summaryMarkedUp = marked(summary);
+      var introMarkedUp = marked(intro);
+  
+      var header = '<meta name="viewport" content="width=device-width, initial-scale=1">' 
+      + '<header>\n'
+      + '  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/github-markdown-css/2.10.0/github-markdown.css">\n'
+      + '  <style>\n'
+      + '      .markdown-body {\n'
+      + '        box-sizing: border-box;\n'
+      + '        min-width: 200px;\n'
+      + '        max-width: 980px;\n'
+      + '        margin: 0 auto;\n'
+      + '        padding: 45px;\n'
+      + '      }\n'
+      + '    \n'
+      + '      @media (max-width: 767px) {\n'
+      + '        .markdown-body {\n'
+      + '          padding: 15px;\n'
+      + '        }\n'
+      + '      }\n'
+      + '    </style>\n'
+      + '</header>\n'
+      + '<body>\n'
+      + '    <article class="markdown-body">\n';
+      
+      var footer = '</article>\n</body>\n';;
+  
+      var final = header + introMarkedUp + summaryMarkedUp + markedUp + footer;
+  
+      fs.writeFile(reportDirName + '/inspec-' + file + '.html', final, (err) => {  
+        // throws an error, you could also catch it here
+        if (err) throw err;
+    
+        // success case, the file was saved
+        console.log('HTML saved!');
+      });      
     });
-  })
+
+    
+
+
+  });
 
 }
 
