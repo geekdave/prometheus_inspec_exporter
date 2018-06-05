@@ -30,8 +30,10 @@ inspec_checks_total{profile="ssl-baseline",status="skipped"} 0
 Run `sudo crontab -e` to set up a recurring job like this:
 
 ```
-*/1 * * * * /usr/local/bin/run_inspec.sh
+0 * * * * /usr/local/bin/run_inspec.sh
 ```
+
+Probably hourly is a good place to start, but your needs may vary.  Some InSpec suites may take a couple minutes to run, so it's not recommended to run it more frequently than the duration of the suites.  Otherwise you might run into errors with overlapping checks overwriting each other.
 
 ### Create InSpec runner
 
@@ -49,6 +51,7 @@ mv /tmp/monitorama.json /usr/local/etc/inspec-results/monitorama.json
 
 ### Launch Container
 
+```
 sudo docker run \
   -d \
   --rm \
@@ -59,7 +62,24 @@ sudo docker run \
 ```
 
 * Change `/usr/local/etc/inspec-results:/usr/local/etc/inspec-results` to reflect `/path/to/your/inspec-results:/usr/local/etc/inspec-results`
+* Change `-p 9207:9207` to reflect `-p $PORT_YOU_WANT_TO_EXPOSE:9207`
 
+### Prometheus Scraping
+
+Sample Prometheus config snippet
+
+```
+  - job_name: 'inspec'
+    scrape_interval: 1m
+    scrape_timeout: 1m
+    static_configs:
+      - targets:
+        - 'myhost1.example.com:9207'
+        - 'myhost2.example.com:9207'
+        - 'myhost3.example.com:9207'
+```
+
+See the Prometheus docs for setting up automatic service discovery instead of maintaining a list of static hosts.  
 
 ## Alerting
 
@@ -95,11 +115,11 @@ This will compare the current time with the last modified time, and you could wr
 
 ```
 alert: StaleInSpecResults
-expr: time() - inspec_checks_mtime{instance=~"$instance"} / 1000 > 120
+expr: time() - inspec_checks_mtime{instance=~"$instance"} / 1000 > 7200
 labels:
   severity: slack
 annotations:
   description: '{{ $labels.instance }} has stale InSpec metrics.'
-  summary: Instance {{ $labels.instance }} expected to have InSpec results refreshed every 60 seconds, but it has been over 120 seconds.  Please check that the cron job is running as expected.
+  summary: Instance {{ $labels.instance }} expected to have InSpec results refreshed every hour, but it has been over 2 hours.  Please check that the cron job is running as expected.
 ``
 
