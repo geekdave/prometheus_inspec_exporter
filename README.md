@@ -1,5 +1,9 @@
 # prometheus_inspec_exporter
 
+## Get Involved!
+
+[Join the "Security Through Observability" Google Group](https://groups.google.com/forum/#!forum/securitythroughobservability) to get updates about this project.
+
 ## What is this?
 
 A Prometheus integration with the [InSpec](https://www.inspec.io/) "Compliance as Code" tool.
