@@ -1,8 +1,10 @@
 # prometheus_inspec_exporter
 
-## Get Involved!
+## Hello Monitorama!
 
 [Join the "Security Through Observability" Google Group](https://groups.google.com/forum/#!forum/securitythroughobservability) to get updates about this project.
+
+For code/config snippets used in my demo, see this repo: https://github.com/geekdave/monitorama
 
 ## What is this?
 
@@ -32,6 +34,10 @@ inspec_checks_total{profile="ssl-baseline",status="skipped"} 0
 This project is currently in the early stages and may be rough around the edges.  It may contain bugs.  Please try it out and let us know how we can improve it!  PRs are welcome!
 
 ## Usage
+
+### Install InSpec
+
+See: https://www.inspec.io/downloads/
 
 ### Set up Cron Job
 
