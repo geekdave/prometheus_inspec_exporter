@@ -23,6 +23,10 @@ inspec_checks_total{profile="ssl-baseline",status="failed"} 0
 inspec_checks_total{profile="ssl-baseline",status="skipped"} 0
 ```
 
+## Project status
+
+This project is currently in the early stages and may be rough around the edges.  It may contain bugs.  Please try it out and let us know how we can improve it!  PRs are welcome!
+
 ## Usage
 
 ### Set up Cron Job
@@ -145,3 +149,14 @@ annotations:
   summary: Instance {{ $labels.instance }} expected to have InSpec results refreshed every hour, but it has been over 2 hours.  Please check that the cron job is running as expected.
 ```
 
+## Building a docker container
+
+```
+docker build . -t org/containername:tag
+```
+
+i.e.
+
+```
+docker build . -t geekdave/prometheus_inspec_exporter:latest
+```
